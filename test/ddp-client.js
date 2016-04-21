@@ -299,6 +299,25 @@ describe('Collection maintenance and observation', function() {
     assert.equal(ddpclient.collections.posts['2trpvcQ4pn32ZYXco'].text, "A cat was here");
     assert.equal(ddpclient.collections.posts['2trpvcQ4pn32ZYXco'].value, true);
   });
+  
+  it('should response to "added" with fields even if maintainCollections is false', function() {
+    var ddpclient = new DDPClient({ maintainCollections: false }), observed = false;
+    var addedFields = undefined;
+    observer = ddpclient.observe("posts");
+    observer.added = function(id, fields) {
+      if (id === '2trpvcQ4pn32ZYXco') {
+        observed = true;
+        addedFields = fields;
+      }
+    }
+
+    ddpclient._message(addedMessage);
+    // ensure there are no collections
+    assert(!ddpclient.collections);
+    assert(observed, "addition observed");
+    assert.equal(addedFields.text, "A cat was here");
+    assert.equal(addedFields.value, true);
+  });
 
   it('should response to "changed" messages', function() {
     var ddpclient = new DDPClient(), observed = false;
@@ -334,6 +353,28 @@ describe('Collection maintenance and observation', function() {
     assert(!ddpclient.collections.posts['2trpvcQ4pn32ZYXco'].hasOwnProperty('value'));
     assert(observed, "cleared change observed")
   });
+  
+  it('should response to "changed" even if maintainCollections is false', function() {
+    var ddpclient = new DDPClient({ maintainCollections: false }), observed = false;
+    observer = ddpclient.observe("posts");
+    observer.changed = function(id, fields) {
+      if (id === "2trpvcQ4pn32ZYXco" && fields.text === "A dog was here") {
+        observed = true;
+      }
+    };
+
+    ddpclient._message(addedMessage);
+    
+    // ensure there are no collections
+    assert(!ddpclient.collections);
+    
+    ddpclient._message(changedMessage);
+    
+    // ensure there are no collections
+    assert(!ddpclient.collections);
+    
+    assert(observed, "field change observed");
+  });
 
   it('should response to "removed" messages', function() {
     var ddpclient = new DDPClient(), oldval;
@@ -346,6 +387,24 @@ describe('Collection maintenance and observation', function() {
     assert(oldval, "Removal observed");
     assert.equal(oldval.text, "A cat was here");
     assert.equal(oldval.value, true);
+  });
+  
+  it('should response to "removed" even if maintainCollections is false', function() {
+    var ddpclient = new DDPClient({ maintainCollections: false }), docid;
+    observer = ddpclient.observe("posts");
+    observer.removed = function(id) { docid = id; };
+
+    ddpclient._message(addedMessage);
+    
+    // ensure there are no collections
+    assert(!ddpclient.collections);
+    
+    ddpclient._message(removedMessage);
+    
+    // ensure there are no collections
+    assert(!ddpclient.collections);
+    
+    assert.equal(docid, "2trpvcQ4pn32ZYXco");
   });
 });
 
